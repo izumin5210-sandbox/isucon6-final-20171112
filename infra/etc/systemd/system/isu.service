@@ -1,0 +1,27 @@
+[Unit]
+Description=isu
+After=syslog.target network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/isucon/
+EnvironmentFile=/home/isucon/isucon6-final-20171112/isucon6-final/webapp/go/src/app/env.sh
+
+ExecStart=/home/isucon/isucon6-final-20171112/isucon6-final/webapp/go/src/app/app
+User=root
+Group=root
+UMask=0002
+
+# if we crash, restart
+RestartSec=1
+Restart=on-failure
+
+# output goes to /var/log/syslog
+StandardOutput=syslog
+StandardError=syslog
+
+# This will default to "bundler" if we don't specify it
+SyslogIdentifier=isu
+
+[Install]
+WantedBy=multi-user.target
