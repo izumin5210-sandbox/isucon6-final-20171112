@@ -510,12 +510,7 @@ func postAPIStrokesRoomsID(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
-	strokes, err := getStrokes(room.ID, 0)
-	if err != nil {
-		outputError(w, err)
-		return
-	}
-	if len(strokes) == 0 {
+	if room.StrokeCount == 0 {
 		query := "SELECT COUNT(*) AS cnt FROM `room_owners` WHERE `room_id` = ? AND `token_id` = ?"
 		cnt := 0
 		err = dbx.QueryRow(query, room.ID, t.ID).Scan(&cnt)
