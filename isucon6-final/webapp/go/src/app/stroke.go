@@ -112,5 +112,5 @@ func getRecentUpdatedRoomIDs() ([]int64, error) {
 	conn := pool.Get()
 	defer conn.Close()
 
-	return redis.Int64s(conn.Do("ZREVRANGE", roomUpdatedAtKey(), 0, 100))
+	return redis.Int64s(conn.Do("ZREVRANGE", roomUpdatedAtKey(), 0, 99))
 }
