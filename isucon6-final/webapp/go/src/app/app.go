@@ -46,7 +46,7 @@ type Stroke struct {
 	Blue      int       `json:"blue" db:"blue"`
 	Alpha     float64   `json:"alpha" db:"alpha"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	Points    []*Point  `json:"points" db:"points"`
+	Points    []*Point  `json:"points"`
 }
 
 type Room struct {
@@ -101,16 +101,6 @@ func checkToken(csrfToken string) (*Token, error) {
 	return t, nil
 }
 
-func getStrokePoints(strokeID int64) ([]*Point, error) {
-	query := "SELECT `id`, `stroke_id`, `x`, `y` FROM `points` WHERE `stroke_id` = ? ORDER BY `id` ASC"
-	ps := []*Point{}
-	err := dbx.Select(&ps, query, strokeID)
-	if err != nil {
-		return nil, err
-	}
-	return ps, nil
-}
-
 func getStrokes(roomID int64, greaterThanID int64) ([]*Stroke, error) {
 	query := "SELECT `id`, `room_id`, `width`, `red`, `green`, `blue`, `alpha`, `created_at` FROM `strokes`"
 	query += " WHERE `room_id` = ? AND `id` > ? ORDER BY `id` ASC"
@@ -131,24 +121,10 @@ func getStrokesWithPoints(roomID int64, greaterThanID int64) ([]*Stroke, error) 
 	if err != nil {
 		return nil, err
 	}
-	strokeByID := map[int64]*Stroke{}
-	ids := make([]int64, 0, len(strokes))
 	for _, s := range strokes {
-		strokeByID[s.ID] = s
-		ids = append(ids, s.ID)
-	}
-	if len(ids) > 0 {
-		query, args, err := sqlx.In("SELECT `id`, `stroke_id`, `x`, `y` FROM `points` WHERE `stroke_id` in (?) ORDER BY `id` ASC", ids)
+		s.Points, err = getStrokePoints(s.ID)
 		if err != nil {
 			return nil, err
-		}
-		ps := []*Point{}
-		err = dbx.Select(&ps, query, args...)
-		if err != nil {
-			return nil, err
-		}
-		for _, p := range ps {
-			strokeByID[p.StrokeID].Points = append(strokeByID[p.StrokeID].Points, p)
 		}
 	}
 	return strokes, nil
@@ -540,13 +516,20 @@ func postAPIStrokesRoomsID(ctx context.Context, w http.ResponseWriter, r *http.R
 		return
 	}
 
+	{
+		values := make([]float64, 0, len(postedStroke.Points)*2)
+		for _, p := range postedStroke.Points {
+			values = append(values, p.X, p.Y)
+		}
+		err := appendPoints(postedStroke.ID, values...)
+		if err != nil {
+			outputError(w, err)
+			return
+		}
+	}
+
 	query = "UPDATE rooms SET rooms.stroke_count = rooms.stroke_count + 1 WHERE rooms.id = ?"
 	tx.MustExec(query, room.ID)
-
-	query = "INSERT INTO `points` (`stroke_id`, `x`, `y`) VALUES (?, ?, ?)"
-	for _, p := range postedStroke.Points {
-		tx.MustExec(query, strokeID, p.X, p.Y)
-	}
 
 	err = tx.Commit()
 	if err != nil {
