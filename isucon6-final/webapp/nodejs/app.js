@@ -11,6 +11,17 @@ import mysql from 'promise-mysql';
 
 import sse from './sse';
 
+import cluster from 'cluster';
+var numCPUs = require('os').cpus().length;
+
+if (cluster.isMaster) {
+    for (var i = 0; i < numCPUs; i++) {
+        // Create a worker
+        cluster.fork();
+    }
+} else {
+    // Workers share the TCP connection in this server
+
 const app = new Koa();
 
 const getDBH = (ctx) => {
@@ -434,3 +445,5 @@ app.use(router.routes());
 app.use(router.allowedMethods());
 
 module.exports = app;
+
+}

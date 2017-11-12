@@ -29,6 +29,6 @@ services:
     links:
       - go_dev
     environment:
-      API: http://go_dev:80
+      API: http://go_dev:8080
     ports:
       - "8080:443"

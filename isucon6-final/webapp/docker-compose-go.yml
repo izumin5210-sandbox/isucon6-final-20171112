@@ -4,10 +4,6 @@ services:
     extends:
       file: docker-compose-react.yml
       service: react
-    depends_on:
-      - go
-    links:
-      - go
     environment:
       API: http://172.31.17.245:80
     ports:
