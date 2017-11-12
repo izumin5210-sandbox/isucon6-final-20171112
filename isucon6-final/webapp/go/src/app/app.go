@@ -166,29 +166,6 @@ func getRoom(roomID int64) (*Room, error) {
 	return r, nil
 }
 
-func getWatcherCount(roomID int64) (int, error) {
-	query := "SELECT COUNT(*) AS `watcher_count` FROM `room_watchers`"
-	query += " WHERE `room_id` = ? AND `updated_at` > CURRENT_TIMESTAMP(6) - INTERVAL 3 SECOND"
-
-	var watcherCount int
-	err := dbx.QueryRow(query, roomID).Scan(&watcherCount)
-	if err != nil && err != sql.ErrNoRows {
-		return 0, err
-	}
-	if err == sql.ErrNoRows {
-		return 0, nil
-	}
-	return watcherCount, nil
-}
-
-func updateRoomWatcher(roomID int64, tokenID int64) error {
-	query := "INSERT INTO `room_watchers` (`room_id`, `token_id`) VALUES (?, ?)"
-	query += " ON DUPLICATE KEY UPDATE `updated_at` = CURRENT_TIMESTAMP(6)"
-
-	_, err := dbx.Exec(query, roomID, tokenID)
-	return err
-}
-
 func outputErrorMsg(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 
@@ -420,7 +397,7 @@ func getAPIStreamRoomsID(ctx context.Context, w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	err = updateRoomWatcher(room.ID, t.ID)
+	err = updateRoomWatcher(room.ID, t.CSRFToken)
 	if err != nil {
 		outputError(w, err)
 		return
@@ -462,7 +439,7 @@ func getAPIStreamRoomsID(ctx context.Context, w http.ResponseWriter, r *http.Req
 			lastStrokeID = s.ID
 		}
 
-		err = updateRoomWatcher(room.ID, t.ID)
+		err = updateRoomWatcher(room.ID, t.CSRFToken)
 		if err != nil {
 			outputError(w, err)
 			return
