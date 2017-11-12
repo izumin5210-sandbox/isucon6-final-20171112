@@ -549,7 +549,7 @@ func main() {
 	}
 	conn.Close()
 
-	strokes := []*Stroke{}
+	strokes, err := getStrokesWithPointsSQL()
 	err = dbx.Select(&strokes, "SELECT id, room_id, width, red, green, blue, alpha FROM strokes")
 	if err != nil {
 		log.Fatalf("Failed to load data from mysql: %s.", err.Error())
@@ -570,4 +570,46 @@ func main() {
 	mux.HandleFuncC(pat.Post("/api/strokes/rooms/:id"), postAPIStrokesRoomsID)
 
 	log.Fatal(http.ListenAndServe("0.0.0.0:8080", mux))
+}
+
+func getStrokesSQL() ([]*Stroke, error) {
+	query := "SELECT `id`, `room_id`, `width`, `red`, `green`, `blue`, `alpha` FROM `strokes`"
+	strokes := []*Stroke{}
+	err := dbx.Select(&strokes, query)
+	if err != nil {
+		return nil, err
+	}
+	// 空スライスを入れてJSONでnullを返さないように
+	for i := range strokes {
+		strokes[i].Points = []*Point{}
+	}
+	return strokes, nil
+}
+
+func getStrokesWithPointsSQL() ([]*Stroke, error) {
+	strokes, err := getStrokesSQL()
+	if err != nil {
+		return nil, err
+	}
+	strokeByID := map[int64]*Stroke{}
+	ids := make([]int64, 0, len(strokes))
+	for _, s := range strokes {
+		strokeByID[s.ID] = s
+		ids = append(ids, s.ID)
+	}
+	if len(ids) > 0 {
+		query, args, err := sqlx.In("SELECT `id`, `stroke_id`, `x`, `y` FROM `points` WHERE `stroke_id` in (?) ORDER BY `id` ASC", ids)
+		if err != nil {
+			return nil, err
+		}
+		ps := []*Point{}
+		err = dbx.Select(&ps, query, args...)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range ps {
+			strokeByID[p.StrokeID].Points = append(strokeByID[p.StrokeID].Points, p)
+		}
+	}
+	return strokes, nil
 }
