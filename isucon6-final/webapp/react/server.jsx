@@ -16,6 +16,16 @@ import Canvas from './components/Canvas';
 import injectTapEventPlugin from 'react-tap-event-plugin';
 injectTapEventPlugin();
 
+import cluster from 'cluster';
+var numCPUs = require('os').cpus().length;
+
+if (cluster.isMaster) {
+    for (var i = 0; i < numCPUs; i++) {
+        // Create a worker
+        cluster.fork();
+    }
+} else {
+
 const apiBaseUrl = process.env.API;
 if (!apiBaseUrl) {
   throw 'Please set environment variable API=http://...';
@@ -122,4 +132,5 @@ function createHtml(appHtml, scriptTag, csrfToken) {
     ${scriptTag}
   </body>
 </html>`;
+}
 }
