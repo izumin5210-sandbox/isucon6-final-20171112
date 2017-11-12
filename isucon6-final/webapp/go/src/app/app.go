@@ -54,7 +54,7 @@ type Room struct {
 	CanvasHeight int       `json:"canvas_height" db:"canvas_height"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
 	Strokes      []*Stroke `json:"strokes"`
-	StrokeCount  int       `json:"stroke_count"`
+	StrokeCount  int       `json:"stroke_count" db:"stroke_count"`
 	WatcherCount int       `json:"watcher_count"`
 }
 
@@ -125,7 +125,7 @@ func getStrokes(roomID int64, greaterThanID int64) ([]*Stroke, error) {
 }
 
 func getRoom(roomID int64) (*Room, error) {
-	query := "SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at` FROM `rooms` WHERE `id` = ?"
+	query := "SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at`, `stroke_count` FROM `rooms` WHERE `id` = ?"
 	r := &Room{}
 	err := dbx.Get(r, query, roomID)
 	if err != nil {
@@ -240,12 +240,6 @@ func getAPIRooms(w http.ResponseWriter, r *http.Request) {
 			outputError(w, err)
 			return
 		}
-		s, err := getStrokes(room.ID, 0)
-		if err != nil {
-			outputError(w, err)
-			return
-		}
-		room.StrokeCount = len(s)
 		rooms = append(rooms, room)
 	}
 
@@ -552,6 +546,9 @@ func postAPIStrokesRoomsID(ctx context.Context, w http.ResponseWriter, r *http.R
 		outputError(w, err)
 		return
 	}
+
+	query = "UPDATE rooms SET rooms.stroke_count = rooms.stroke_count + 1 WHERE rooms.id = ?"
+	tx.MustExec(query, room.ID)
 
 	query = "INSERT INTO `points` (`stroke_id`, `x`, `y`) VALUES (?, ?, ?)"
 	for _, p := range postedStroke.Points {
