@@ -454,18 +454,13 @@ func getAPIStreamRoomsID(ctx context.Context, w http.ResponseWriter, r *http.Req
 		loop--
 		time.Sleep(500 * time.Millisecond)
 
-		strokes, err := getStrokes(room.ID, int64(lastStrokeID))
+		strokes, err := getStrokesWithPoints(room.ID, int64(lastStrokeID))
 		if err != nil {
 			outputError(w, err)
 			return
 		}
 
 		for _, s := range strokes {
-			s.Points, err = getStrokePoints(s.ID)
-			if err != nil {
-				outputError(w, err)
-				return
-			}
 			d, _ := json.Marshal(s)
 			printAndFlush(w, "id:"+strconv.FormatInt(s.ID, 10)+"\n\n"+"event:stroke\n"+"data:"+string(d)+"\n\n")
 			lastStrokeID = s.ID
