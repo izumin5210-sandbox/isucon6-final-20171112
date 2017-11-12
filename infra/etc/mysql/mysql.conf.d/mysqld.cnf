@@ -4,7 +4,7 @@
 # You can copy this to one of:
 # - "/etc/mysql/my.cnf" to set global options,
 # - "~/.my.cnf" to set user-specific options.
-# 
+#
 # One can use all long options that the program supports.
 # Run program with --help to get a list of available options and with
 # --print-defaults to see which it would actually understand and use.
@@ -25,6 +25,10 @@ socket		= /var/run/mysqld/mysqld.sock
 nice		= 0
 
 [mysqld]
+innodb_buffer_pool_size = 3GB
+innodb_flush_method = O_DIRECT
+innodb_flush_log_at_trx_commit = 2
+innodb_log_file_size = 1GB
 #
 # * Basic Settings
 #
