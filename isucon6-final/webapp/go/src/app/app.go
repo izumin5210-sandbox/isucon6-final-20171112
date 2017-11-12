@@ -44,7 +44,7 @@ type Stroke struct {
 	Blue      int       `json:"blue" db:"blue"`
 	Alpha     float64   `json:"alpha" db:"alpha"`
 	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	Points    []Point   `json:"points" db:"points"`
+	Points    []*Point  `json:"points" db:"points"`
 }
 
 type Room struct {
@@ -53,7 +53,7 @@ type Room struct {
 	CanvasWidth  int       `json:"canvas_width" db:"canvas_width"`
 	CanvasHeight int       `json:"canvas_height" db:"canvas_height"`
 	CreatedAt    time.Time `json:"created_at" db:"created_at"`
-	Strokes      []Stroke  `json:"strokes"`
+	Strokes      []*Stroke `json:"strokes"`
 	StrokeCount  int       `json:"stroke_count"`
 	WatcherCount int       `json:"watcher_count"`
 }
@@ -99,9 +99,9 @@ func checkToken(csrfToken string) (*Token, error) {
 	return t, nil
 }
 
-func getStrokePoints(strokeID int64) ([]Point, error) {
+func getStrokePoints(strokeID int64) ([]*Point, error) {
 	query := "SELECT `id`, `stroke_id`, `x`, `y` FROM `points` WHERE `stroke_id` = ? ORDER BY `id` ASC"
-	ps := []Point{}
+	ps := []*Point{}
 	err := dbx.Select(&ps, query, strokeID)
 	if err != nil {
 		return nil, err
@@ -109,17 +109,17 @@ func getStrokePoints(strokeID int64) ([]Point, error) {
 	return ps, nil
 }
 
-func getStrokes(roomID int64, greaterThanID int64) ([]Stroke, error) {
+func getStrokes(roomID int64, greaterThanID int64) ([]*Stroke, error) {
 	query := "SELECT `id`, `room_id`, `width`, `red`, `green`, `blue`, `alpha`, `created_at` FROM `strokes`"
 	query += " WHERE `room_id` = ? AND `id` > ? ORDER BY `id` ASC"
-	strokes := []Stroke{}
+	strokes := []*Stroke{}
 	err := dbx.Select(&strokes, query, roomID, greaterThanID)
 	if err != nil {
 		return nil, err
 	}
 	// 空スライスを入れてJSONでnullを返さないように
 	for i := range strokes {
-		strokes[i].Points = []Point{}
+		strokes[i].Points = []*Point{}
 	}
 	return strokes, nil
 }
@@ -132,7 +132,7 @@ func getRoom(roomID int64) (*Room, error) {
 		return nil, err
 	}
 	// 空スライスを入れてJSONでnullを返さないように
-	r.Strokes = []Stroke{}
+	r.Strokes = []*Stroke{}
 	return r, nil
 }
 
