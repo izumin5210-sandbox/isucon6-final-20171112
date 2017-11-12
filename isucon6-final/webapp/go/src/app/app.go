@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/garyburd/redigo/redis"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 	"goji.io"
@@ -19,7 +20,8 @@ import (
 )
 
 var (
-	dbx *sqlx.DB
+	dbx  *sqlx.DB
+	pool *redis.Pool
 )
 
 type Token struct {
@@ -634,6 +636,19 @@ func main() {
 		log.Fatalf("Failed to connect to DB: %s.", err.Error())
 	}
 	defer dbx.Close()
+
+	redisURL := os.Getenv("REDIS_URL")
+	if redisURL == "" {
+		redisURL = "redis://localhost:6379"
+	}
+
+	pool = &redis.Pool{
+		MaxIdle:     10,
+		IdleTimeout: 10 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.DialURL(redisURL)
+		},
+	}
 
 	mux := goji.NewMux()
 	mux.HandleFunc(pat.Post("/api/csrf_token"), postAPICsrfToken)
