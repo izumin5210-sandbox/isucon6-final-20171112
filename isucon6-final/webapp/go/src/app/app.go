@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/garyburd/redigo/redis"
@@ -489,6 +490,49 @@ func postAPIStrokesRoomsID(ctx context.Context, w http.ResponseWriter, r *http.R
 	w.Write(b)
 }
 
+func getImgID(c context.Context, w http.ResponseWriter, r *http.Request) {
+	idStr := pat.Param(c, "id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		outputErrorMsg(w, http.StatusNotFound, "この部屋は存在しません。")
+		return
+	}
+
+	room, err := getRoom(id)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			outputErrorMsg(w, http.StatusNotFound, "この部屋は存在しません。")
+		} else {
+			outputError(w, err)
+		}
+		return
+	}
+
+	strokes, err := getStrokesWithPoints(room.ID, 0)
+	if err != nil {
+		outputError(w, err)
+		return
+	}
+	w.Header().Set("Content-Type", "image/svg+xml")
+	fmt.Fprint(w, `<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">`)
+
+	fmt.Fprintf(w, `<svg xmlns="http://www.w3.org/2000/svg" version="1.1" baseProfile="full" ref="svgElement"
+        width="%d"
+        height="%d"
+		style="width: %d; height: %d, background-color: white;"
+        viewBox="0 0 %d %d">`, room.CanvasWidth, room.CanvasHeight, room.CanvasWidth, room.CanvasHeight, room.CanvasWidth, room.CanvasHeight)
+	for _, s := range strokes {
+		var ps []string
+		for _, p := range s.Points {
+			ps = append(ps, fmt.Sprintf("%f,%f", p.X, p.Y))
+		}
+
+		fmt.Fprintf(w, `<polyline key="%d" id="%d" stroke="rgba(%d,%d,%d,%.2f)" stroke-width="%d" stroke-linecap="round" stroke-linejoin="round" fill="none" points="%s"/>`, s.ID, s.ID, s.Red, s.Green, s.Blue, s.Alpha, s.Width, strings.Join(ps, " "))
+	}
+	fmt.Fprintf(w, "</svg")
+}
+
 func main() {
 	host := os.Getenv("MYSQL_HOST")
 	if host == "" {
@@ -544,6 +588,7 @@ func main() {
 	mux.HandleFuncC(pat.Get("/api/rooms/:id"), getAPIRoomsID)
 	mux.HandleFuncC(pat.Get("/api/stream/rooms/:id"), getAPIStreamRoomsID)
 	mux.HandleFuncC(pat.Post("/api/strokes/rooms/:id"), postAPIStrokesRoomsID)
+	mux.HandleFuncC(pat.Get("/img/:id"), getImgID)
 
 	log.Fatal(http.ListenAndServe("0.0.0.0:8080", mux))
 }

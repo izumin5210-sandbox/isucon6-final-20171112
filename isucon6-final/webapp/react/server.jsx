@@ -36,28 +36,28 @@ const app = express();
 app.use(express.static('public'));
 
 app.use('/api/*', proxy({ target: apiBaseUrl, changeOrigin: true }));
-
-app.get('/img/:id', (req, res) => {
-  fetchJson(`${apiBaseUrl}/api/rooms/${req.params.id}`)
-    .then((json) => {
-      const svg = renderToStaticMarkup(
-        <Canvas
-          width={json.room.canvas_width}
-          height={json.room.canvas_height}
-          strokes={json.room.strokes}
-        />
-      );
-      res.type('image/svg+xml').send(
-        '<?xml version="1.0" standalone="no"?>' +
-        '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' +
-        svg
-      );
-    })
-    .catch((err) => {
-      console.log(`error: ${err.message}`);
-      return res.status(500);
-    });
-});
+app.use('/img/*', proxy({ target: apiBaseUrl, changeOrigin: true }));
+// app.get('/img/:id', (req, res) => {
+//   fetchJson(`${apiBaseUrl}/api/rooms/${req.params.id}`)
+//     .then((json) => {
+//       const svg = renderToStaticMarkup(
+//         <Canvas
+//           width={json.room.canvas_width}
+//           height={json.room.canvas_height}
+//           strokes={json.room.strokes}
+//         />
+//       );
+//       res.type('image/svg+xml').send(
+//         '<?xml version="1.0" standalone="no"?>' +
+//         '<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">' +
+//         svg
+//       );
+//     })
+//     .catch((err) => {
+//       console.log(`error: ${err.message}`);
+//       return res.status(500);
+//     });
+// });
 
 app.get('*', (req, res) => {
   // https://github.com/reactjs/react-router/blob/master/docs/guides/ServerRendering.md
