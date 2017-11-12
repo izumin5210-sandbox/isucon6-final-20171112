@@ -7,14 +7,14 @@ on strokes (
 
 create index
   index_points_on_stroke_id_and_id
-on strokes (
+on points (
   stroke_id,
   id
 )
 
 create index
   index_tokens_on_csrf_token_and_created_at
-on strokes (
+on tokens (
   csrf_token,
   created_at
 )
