@@ -632,5 +632,10 @@ func main() {
 	mux.HandleFuncC(pat.Get("/api/stream/rooms/:id"), getAPIStreamRoomsID)
 	mux.HandleFuncC(pat.Post("/api/strokes/rooms/:id"), postAPIStrokesRoomsID)
 
-	log.Fatal(http.ListenAndServe("0.0.0.0:80", mux))
+	bind := os.Getenv("PORT")
+	if bind == "" {
+		bind = "80"
+	}
+
+	log.Fatal(http.ListenAndServe(fmt.Sprintf("0.0.0.0:%s", bind), mux))
 }
