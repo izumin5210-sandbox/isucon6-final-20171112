@@ -14,7 +14,7 @@ services:
       - mysql
     environment:
       ISUCON_ENV: production
-      MYSQL_HOST: mysql
+      MYSQL_HOST: 172.31.26.225 # isu-3 のprivate ip
       MYSQL_PORT: 3306
       MYSQL_USER: isucon
       MYSQL_PASS: isucon
