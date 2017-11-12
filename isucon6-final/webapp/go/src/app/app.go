@@ -199,6 +199,11 @@ func getAPIRooms(w http.ResponseWriter, r *http.Request) {
 			outputError(w, err)
 			return
 		}
+		room.StrokeCount, err = getStrokeCount(room.ID)
+		if err != nil {
+			outputError(w, err)
+			return
+		}
 		rooms = append(rooms, room)
 	}
 
