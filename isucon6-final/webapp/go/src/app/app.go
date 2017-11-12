@@ -38,14 +38,14 @@ type Point struct {
 }
 
 type Stroke struct {
-	ID     int64   `json:"id" db:"id" redis:"id"`
-	RoomID int64   `json:"room_id" db:"room_id"`
-	Width  int     `json:"width" db:"width" redis:"width"`
-	Red    int     `json:"red" db:"red" redis:"red"`
-	Green  int     `json:"green" db:"green" redis:"green"`
-	Blue   int     `json:"blue" db:"blue" redis:"blue"`
-	Alpha  float64 `json:"alpha" db:"alpha" redis:"alpha"`
-	// CreatedAt time.Time `json:"created_at" db:"created_at"`
+	ID     int64   `json:"id" redis:"id"`
+	RoomID int64   `json:"room_id"`
+	Width  int     `json:"width" redis:"width"`
+	Red    int     `json:"red" redis:"red"`
+	Green  int     `json:"green" redis:"green"`
+	Blue   int     `json:"blue" redis:"blue"`
+	Alpha  float64 `json:"alpha" redis:"alpha"`
+	// CreatedAt time.Time `json:"created_at" redis:"created_at"`
 	Points []*Point `json:"points"`
 }
 
@@ -540,25 +540,6 @@ func main() {
 		Dial: func() (redis.Conn, error) {
 			return redis.DialURL(redisURL)
 		},
-	}
-
-	conn := pool.Get()
-	_, err = conn.Do("FLUSHALL")
-	if err != nil {
-		log.Fatalf("Failed to flush to redis: %s.", err.Error())
-	}
-	conn.Close()
-
-	strokes := []*Stroke{}
-	err = dbx.Select(&strokes, "SELECT id, room_id, width, red, green, blue, alpha FROM strokes")
-	if err != nil {
-		log.Fatalf("Failed to load data from mysql: %s.", err.Error())
-	}
-	for _, s := range strokes {
-		err = appendStroke(s.RoomID, s)
-		if err != nil {
-			log.Fatalf("Failed to import data to redis: %s.", err.Error())
-		}
 	}
 
 	mux := goji.NewMux()
