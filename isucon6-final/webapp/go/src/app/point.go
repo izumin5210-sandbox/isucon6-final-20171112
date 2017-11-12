@@ -33,7 +33,7 @@ func getStrokePoints(strokeID int64) ([]*Point, error) {
 		return nil, err
 	}
 	n := len(values) / 2
-	ps := make([]*Point, 0, n)
+	ps := make([]*Point, n, n)
 	for i := 0; i < n; i++ {
 		ps[i] = &Point{
 			X:        values[2*i],

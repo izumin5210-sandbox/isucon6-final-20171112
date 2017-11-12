@@ -38,15 +38,15 @@ type Point struct {
 }
 
 type Stroke struct {
-	ID        int64     `json:"id" db:"id"`
-	RoomID    int64     `json:"room_id" db:"room_id"`
-	Width     int       `json:"width" db:"width"`
-	Red       int       `json:"red" db:"red"`
-	Green     int       `json:"green" db:"green"`
-	Blue      int       `json:"blue" db:"blue"`
-	Alpha     float64   `json:"alpha" db:"alpha"`
-	CreatedAt time.Time `json:"created_at" db:"created_at"`
-	Points    []*Point  `json:"points"`
+	ID     int64   `json:"id" redis:"id"`
+	RoomID int64   `json:"room_id"`
+	Width  int     `json:"width" redis:"width"`
+	Red    int     `json:"red" redis:"red"`
+	Green  int     `json:"green" redis:"green"`
+	Blue   int     `json:"blue" redis:"blue"`
+	Alpha  float64 `json:"alpha" redis:"alpha"`
+	// CreatedAt time.Time `json:"created_at" redis:"created_at"`
+	Points []*Point `json:"points"`
 }
 
 type Room struct {
@@ -99,21 +99,6 @@ func checkToken(csrfToken string) (*Token, error) {
 	}
 
 	return t, nil
-}
-
-func getStrokes(roomID int64, greaterThanID int64) ([]*Stroke, error) {
-	query := "SELECT `id`, `room_id`, `width`, `red`, `green`, `blue`, `alpha`, `created_at` FROM `strokes`"
-	query += " WHERE `room_id` = ? AND `id` > ? ORDER BY `id` ASC"
-	strokes := []*Stroke{}
-	err := dbx.Select(&strokes, query, roomID, greaterThanID)
-	if err != nil {
-		return nil, err
-	}
-	// 空スライスを入れてJSONでnullを返さないように
-	for i := range strokes {
-		strokes[i].Points = []*Point{}
-	}
-	return strokes, nil
 }
 
 func getStrokesWithPoints(roomID int64, greaterThanID int64) ([]*Stroke, error) {
@@ -199,17 +184,7 @@ func postAPICsrfToken(w http.ResponseWriter, r *http.Request) {
 }
 
 func getAPIRooms(w http.ResponseWriter, r *http.Request) {
-	query := "SELECT `room_id`, MAX(`id`) AS `max_id` FROM `strokes`"
-	query += " GROUP BY `room_id` ORDER BY `max_id` DESC LIMIT 100"
-
-	type result struct {
-		RoomID int64 `db:"room_id"`
-		MaxID  int64 `db:"max_id"`
-	}
-
-	results := []result{}
-
-	err := dbx.Select(&results, query)
+	roomIDs, err := getRecentUpdatedRoomIDs()
 	if err != nil {
 		outputError(w, err)
 		return
@@ -217,8 +192,8 @@ func getAPIRooms(w http.ResponseWriter, r *http.Request) {
 
 	rooms := []*Room{}
 
-	for _, r := range results {
-		room, err := getRoom(r.RoomID)
+	for _, roomID := range roomIDs {
+		room, err := getRoom(roomID)
 		if err != nil {
 			outputError(w, err)
 			return
@@ -329,6 +304,7 @@ func getAPIRoomsID(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 
 	room.Strokes = strokes
 	room.WatcherCount, err = getWatcherCount(room.ID)
+	room.StrokeCount, err = getStrokeCount(room.ID)
 	if err != nil {
 		outputError(w, err)
 		return
@@ -467,7 +443,7 @@ func postAPIStrokesRoomsID(ctx context.Context, w http.ResponseWriter, r *http.R
 		outputError(w, err)
 		return
 	}
-	postedStroke := Stroke{}
+	postedStroke := &Stroke{}
 	err = json.Unmarshal(body, &postedStroke)
 	if err != nil {
 		outputError(w, err)
@@ -498,64 +474,15 @@ func postAPIStrokesRoomsID(ctx context.Context, w http.ResponseWriter, r *http.R
 		}
 	}
 
-	tx := dbx.MustBegin()
-	query := "INSERT INTO `strokes` (`room_id`, `width`, `red`, `green`, `blue`, `alpha`)"
-	query += " VALUES(?, ?, ?, ?, ?, ?)"
-
-	result := tx.MustExec(query,
-		room.ID,
-		postedStroke.Width,
-		postedStroke.Red,
-		postedStroke.Green,
-		postedStroke.Blue,
-		postedStroke.Alpha,
-	)
-	strokeID, err := result.LastInsertId()
-	if err != nil {
-		outputError(w, err)
-		return
-	}
-
-	{
-		values := make([]float64, 0, len(postedStroke.Points)*2)
-		for _, p := range postedStroke.Points {
-			values = append(values, p.X, p.Y)
-		}
-		err := appendPoints(postedStroke.ID, values...)
-		if err != nil {
-			outputError(w, err)
-			return
-		}
-	}
-
-	query = "UPDATE rooms SET rooms.stroke_count = rooms.stroke_count + 1 WHERE rooms.id = ?"
-	tx.MustExec(query, room.ID)
-
-	err = tx.Commit()
-	if err != nil {
-		tx.Rollback()
-		outputError(w, err)
-		return
-	}
-
-	query = "SELECT `id`, `room_id`, `width`, `red`, `green`, `blue`, `alpha`, `created_at` FROM `strokes`"
-	query += " WHERE `id` = ?"
-	s := Stroke{}
-	err = dbx.Get(&s, query, strokeID)
-	if err != nil {
-		outputError(w, err)
-		return
-	}
-
-	s.Points, err = getStrokePoints(strokeID)
+	err = appendStroke(room.ID, postedStroke)
 	if err != nil {
 		outputError(w, err)
 		return
 	}
 
 	b, _ := json.Marshal(struct {
-		Stroke Stroke `json:"stroke"`
-	}{Stroke: s})
+		Stroke *Stroke `json:"stroke"`
+	}{Stroke: postedStroke})
 
 	w.Header().Set("Content-Type", "application/json;charset=utf-8")
 	w.WriteHeader(http.StatusOK)
