@@ -28,7 +28,7 @@ services:
       MYSQL_PORT: 3306
       MYSQL_USER: isucon
       MYSQL_PASS: isucon
-      REDIS_URL: redis://redis:6543
+      REDIS_URL: redis://redis:6379
   react_dev:
     extends:
       file: docker-compose-react.yml
