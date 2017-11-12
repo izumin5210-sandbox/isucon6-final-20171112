@@ -135,17 +135,19 @@ func getStrokesWithPoints(roomID int64, greaterThanID int64) ([]*Stroke, error) 
 		strokeByID[s.ID] = s
 		ids = append(ids, s.ID)
 	}
-	query, args, err := sqlx.In("SELECT `id`, `stroke_id`, `x`, `y` FROM `points` WHERE `stroke_id` in (?) ORDER BY `id` ASC", ids)
-	if err != nil {
-		return nil, err
-	}
-	ps := []*Point{}
-	err = dbx.Select(&ps, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	for _, p := range ps {
-		strokeByID[p.StrokeID].Points = append(strokeByID[p.StrokeID].Points, p)
+	if len(ids) > 0 {
+		query, args, err := sqlx.In("SELECT `id`, `stroke_id`, `x`, `y` FROM `points` WHERE `stroke_id` in (?) ORDER BY `id` ASC", ids)
+		if err != nil {
+			return nil, err
+		}
+		ps := []*Point{}
+		err = dbx.Select(&ps, query, args...)
+		if err != nil {
+			return nil, err
+		}
+		for _, p := range ps {
+			strokeByID[p.StrokeID].Points = append(strokeByID[p.StrokeID].Points, p)
+		}
 	}
 	return strokes, nil
 }
