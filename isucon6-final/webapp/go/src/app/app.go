@@ -124,6 +124,32 @@ func getStrokes(roomID int64, greaterThanID int64) ([]*Stroke, error) {
 	return strokes, nil
 }
 
+func getStrokesWithPoints(roomID int64, greaterThanID int64) ([]*Stroke, error) {
+	strokes, err := getStrokes(roomID, greaterThanID)
+	if err != nil {
+		return nil, err
+	}
+	strokeByID := map[int64]*Stroke{}
+	ids := make([]int64, 0, len(strokes))
+	for _, s := range strokes {
+		strokeByID[s.ID] = s
+		ids = append(ids, s.ID)
+	}
+	query, args, err := sqlx.In("SELECT `id`, `stroke_id`, `x`, `y` FROM `points` WHERE `stroke_id` in (?) ORDER BY `id` ASC", ids)
+	if err != nil {
+		return nil, err
+	}
+	ps := []*Point{}
+	err = dbx.Select(&ps, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	for _, p := range ps {
+		strokeByID[p.StrokeID].Points = append(strokeByID[p.StrokeID].Points, p)
+	}
+	return strokes, nil
+}
+
 func getRoom(roomID int64) (*Room, error) {
 	query := "SELECT `id`, `name`, `canvas_width`, `canvas_height`, `created_at` FROM `rooms` WHERE `id` = ?"
 	r := &Room{}
@@ -344,19 +370,10 @@ func getAPIRoomsID(ctx context.Context, w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	strokes, err := getStrokes(room.ID, 0)
+	strokes, err := getStrokesWithPoints(room.ID, 0)
 	if err != nil {
 		outputError(w, err)
 		return
-	}
-
-	for i, s := range strokes {
-		p, err := getStrokePoints(s.ID)
-		if err != nil {
-			outputError(w, err)
-			return
-		}
-		strokes[i].Points = p
 	}
 
 	room.Strokes = strokes
