@@ -632,5 +632,5 @@ func main() {
 	mux.HandleFuncC(pat.Get("/api/stream/rooms/:id"), getAPIStreamRoomsID)
 	mux.HandleFuncC(pat.Post("/api/strokes/rooms/:id"), postAPIStrokesRoomsID)
 
-	log.Fatal(http.ListenAndServe("0.0.0.0:80", mux))
+	log.Fatal(http.ListenAndServe("0.0.0.0:8080", mux))
 }
