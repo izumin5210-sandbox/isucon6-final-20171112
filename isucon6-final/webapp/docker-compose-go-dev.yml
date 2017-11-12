@@ -6,6 +6,10 @@ services:
       service: mysql
     ports:
       - "3306:3306"
+  redis:
+    extends:
+      file: docker-compose-redis.yml
+      service: redis
   go_dev:
     build:
       context: ./go/src/app
@@ -14,14 +18,17 @@ services:
       - ./go/src/app:/go/src/github.com/isucon/isucon6-final/webapp/go
     depends_on:
       - mysql
+      - redis
     links:
       - mysql
+      - redis
     environment:
       ISUCON_ENV: development
       MYSQL_HOST: mysql
       MYSQL_PORT: 3306
       MYSQL_USER: isucon
       MYSQL_PASS: isucon
+      REDIS_URL: redis://redis:6543
   react_dev:
     extends:
       file: docker-compose-react.yml
