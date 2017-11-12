@@ -23,7 +23,9 @@ func appendStroke(roomID int64, s *Stroke) error {
 	conn := pool.Get()
 	defer conn.Close()
 
-	s.ID = time.Now().UTC().UnixNano()
+	if s.ID == 0 {
+		s.ID = time.Now().UTC().UnixNano()
+	}
 	s.RoomID = roomID
 	var err error
 	_, err = conn.Do("ZADD", strokeIDsKey(roomID), s.ID, s.ID)
@@ -46,9 +48,11 @@ func appendStroke(roomID int64, s *Stroke) error {
 	for _, p := range s.Points {
 		values = append(values, p.X, p.Y)
 	}
-	err = appendPoints(s.ID, values...)
-	if err != nil {
-		return err
+	if len(s.Points) > 0 {
+		err = appendPoints(s.ID, values...)
+		if err != nil {
+			return err
+		}
 	}
 	_, err = conn.Do("ZADD", roomUpdatedAtKey(), time.Now().UTC().Unix(), roomID)
 	if err != nil {
