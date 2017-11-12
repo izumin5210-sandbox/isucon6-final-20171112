@@ -36,7 +36,7 @@ const app = express();
 app.use(express.static('public'));
 
 app.use('/api/*', proxy({ target: apiBaseUrl, changeOrigin: true }));
-
+// app.use('/img/*', proxy({ target: apiBaseUrl, changeOrigin: true }));
 app.get('/img/:id', (req, res) => {
   fetchJson(`${apiBaseUrl}/api/rooms/${req.params.id}`)
     .then((json) => {
