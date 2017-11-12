@@ -6,10 +6,10 @@ services:
       service: mysql
   go_dev:
     build:
-      context: ./go
+      context: ./go/src/app
       dockerfile: Dockerfile-dev
     volumes:
-      - ./go:/go/src/github.com/isucon/isucon6-final/webapp/go
+      - ./go/src/app:/go/src/github.com/isucon/isucon6-final/webapp/go
     depends_on:
       - mysql
     links:
@@ -31,4 +31,4 @@ services:
     environment:
       API: http://go_dev:80
     ports:
-      - "443:443"
+      - "8080:443"
